@@ -243,7 +243,7 @@ def customer_detail(customer_id):
         flash("Client introuvable.", "danger")
         return redirect(url_for("customers"))
 
-    orders = conn.execute("""
+    orders_history = conn.execute("""
         SELECT co.id, co.order_date, co.status,
                SUM(oi.quantity * oi.unit_price) AS total_amount
         FROM CustomerOrder co
@@ -262,7 +262,122 @@ def customer_detail(customer_id):
 
     conn.close()
 
-    return render_template("customer_detail.html", customer=customer, orders=orders, total_spent=total_spent)
+    return render_template("customer_detail.html", customer=customer, orders=orders_history, total_spent=total_spent)
+
+
+@app.route("/orders")
+def orders():
+    conn = get_db()
+    order_list = conn.execute("""
+        SELECT co.id, c.first_name || ' ' || c.last_name AS customer_name,
+               co.order_date, co.status,
+               SUM(oi.quantity * oi.unit_price) AS total_amount
+        FROM CustomerOrder co
+        JOIN Customer c ON co.customer_id = c.id
+        JOIN OrderItem oi ON co.id = oi.order_id
+        GROUP BY co.id, c.first_name, c.last_name, co.order_date, co.status
+        ORDER BY co.order_date DESC
+    """).fetchall()
+    conn.close()
+    return render_template("orders.html", orders=order_list)
+
+
+@app.route("/orders/new", methods=["GET", "POST"])
+def order_new():
+    conn = get_db()
+
+    if request.method == "POST":
+        customer_id = request.form.get("customer_id")
+        products_all = conn.execute("SELECT * FROM Product").fetchall()
+
+        if not customer_id:
+            conn.close()
+            flash("Choisis un client.", "danger")
+            return redirect(url_for("order_new"))
+
+        items = []
+        for p in products_all:
+            qty_raw = request.form.get(f"qty_{p['id']}", "0")
+            try:
+                qty = int(qty_raw)
+            except ValueError:
+                qty = 0
+            if qty > 0:
+                items.append({"product_id": p["id"], "name": p["name"], "qty": qty,
+                              "price": p["price"], "stock": p["stock"]})
+
+        if not items:
+            conn.close()
+            flash("Sélectionne au moins un produit avec une quantité.", "danger")
+            return redirect(url_for("order_new"))
+
+        for item in items:
+            if item["qty"] > item["stock"]:
+                conn.close()
+                flash(f"Stock insuffisant pour {item['name']} (demandé: {item['qty']}, disponible: {item['stock']}).", "danger")
+                return redirect(url_for("order_new"))
+
+        try:
+            cur = conn.execute(
+                "INSERT INTO CustomerOrder (customer_id, order_date, status) VALUES (?, CURRENT_TIMESTAMP, 'pending')",
+                (customer_id,),
+            )
+            order_id = cur.lastrowid
+
+            for item in items:
+                conn.execute(
+                    "INSERT INTO OrderItem (order_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)",
+                    (order_id, item["product_id"], item["qty"], item["price"]),
+                )
+                conn.execute(
+                    "UPDATE Product SET stock = stock - ? WHERE id = ?",
+                    (item["qty"], item["product_id"]),
+                )
+
+            conn.commit()
+            flash("Commande créée.", "success")
+        except Exception:
+            conn.rollback()
+            flash("Erreur lors de la création de la commande, rien n'a été enregistré.", "danger")
+        finally:
+            conn.close()
+
+        return redirect(url_for("orders"))
+
+    customers_list = conn.execute("SELECT * FROM Customer ORDER BY last_name").fetchall()
+    products_list = conn.execute("SELECT * FROM Product ORDER BY name").fetchall()
+    conn.close()
+    return render_template("order_form.html", customers=customers_list, products=products_list)
+
+
+@app.route("/orders/<int:order_id>")
+def order_detail(order_id):
+    conn = get_db()
+
+    order = conn.execute("""
+        SELECT co.id, co.order_date, co.status, c.first_name, c.last_name, c.email
+        FROM CustomerOrder co
+        JOIN Customer c ON co.customer_id = c.id
+        WHERE co.id = ?
+    """, (order_id,)).fetchone()
+
+    if order is None:
+        conn.close()
+        flash("Commande introuvable.", "danger")
+        return redirect(url_for("orders"))
+
+    items = conn.execute("""
+        SELECT p.name, oi.quantity, oi.unit_price,
+               (oi.quantity * oi.unit_price) AS line_total
+        FROM OrderItem oi
+        JOIN Product p ON oi.product_id = p.id
+        WHERE oi.order_id = ?
+    """, (order_id,)).fetchall()
+
+    total = sum(item["line_total"] for item in items)
+
+    conn.close()
+    return render_template("order_detail.html", order=order, items=items, total=total)
 
 
 if __name__ == "__main__":

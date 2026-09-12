@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<a href="{{ url_for('orders') }}">&larr; Retour aux commandes</a>
+<h1 class="mt-2">Commande #{{ order['id'] }}</h1>
+<p>
+    Client : {{ order['first_name'] }} {{ order['last_name'] }} ({{ order['email'] }})<br>
+    Date : {{ order['order_date'] }}<br>
+    Statut : {{ order['status'] }}
+</p>
+<table class="table table-striped">
+    <thead><tr><th>Produit</th><th>Quantité</th><th>Prix unitaire</th><th>Total ligne</th></tr></thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td>{{ item['name'] }}</td>
+            <td>{{ item['quantity'] }}</td>
+            <td>{{ "%.2f"|format(item['unit_price']) }} €</td>
+            <td>{{ "%.2f"|format(item['line_total']) }} €</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr><th colspan="3">Total commande</th><th>{{ "%.2f"|format(total) }} €</th></tr>
+    </tfoot>
+</table>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Nouvelle commande</h1>
+<form method="post">
+    <div class="mb-3">
+        <label class="form-label">Client</label>
+        <select name="customer_id" class="form-select" required>
+            <option value="">-- Choisir --</option>
+            {% for c in customers %}
+            <option value="{{ c['id'] }}">{{ c['first_name'] }} {{ c['last_name'] }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <h5>Produits (mets une quantité &gt; 0 pour les produits à commander)</h5>
+    <table class="table">
+        <thead><tr><th>Produit</th><th>Prix</th><th>Stock disponible</th><th>Quantité</th></tr></thead>
+        <tbody>
+            {% for p in products %}
+            <tr>
+                <td>{{ p['name'] }}</td>
+                <td>{{ "%.2f"|format(p['price']) }} €</td>
+                <td>{{ p['stock'] }}</td>
+                <td><input type="number" min="0" max="{{ p['stock'] }}" name="qty_{{ p['id'] }}" value="0" class="form-control" style="width: 90px;"></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <button class="btn btn-primary">Créer la commande</button>
+    <a href="{{ url_for('orders') }}" class="btn btn-secondary">Annuler</a>
+</form>
+{% endblock %}
