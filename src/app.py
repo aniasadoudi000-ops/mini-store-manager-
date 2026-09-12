@@ -380,5 +380,95 @@ def order_detail(order_id):
     return render_template("order_detail.html", order=order, items=items, total=total)
 
 
+@app.route("/analytics")
+def analytics():
+    conn = get_db()
+
+    revenue_by_category = conn.execute("""
+        SELECT c.name AS category_name,
+               SUM(oi.quantity) AS total_units_sold,
+               SUM(oi.quantity * oi.unit_price) AS total_revenue
+        FROM Category c
+        JOIN Product p ON p.category_id = c.id
+        JOIN OrderItem oi ON oi.product_id = p.id
+        JOIN CustomerOrder co ON oi.order_id = co.id
+        WHERE co.status != 'cancelled'
+        GROUP BY c.id, c.name
+        ORDER BY total_revenue DESC
+    """).fetchall()
+
+    top_customers = conn.execute("""
+        SELECT c.first_name || ' ' || c.last_name AS full_name,
+               COUNT(DISTINCT co.id) AS nb_orders,
+               COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS total_spent
+        FROM Customer c
+        LEFT JOIN CustomerOrder co ON c.id = co.customer_id AND co.status != 'cancelled'
+        LEFT JOIN OrderItem oi ON co.id = oi.order_id
+        GROUP BY c.id, c.first_name, c.last_name
+        ORDER BY total_spent DESC
+        LIMIT 5
+    """).fetchall()
+
+    never_ordered = conn.execute("""
+        SELECT p.id, p.name
+        FROM Product p
+        WHERE NOT EXISTS (
+            SELECT 1 FROM OrderItem oi WHERE oi.product_id = p.id
+        )
+    """).fetchall()
+
+    above_average = conn.execute("""
+        WITH order_totals AS (
+            SELECT co.id AS order_id, co.order_date, co.status,
+                   SUM(oi.quantity * oi.unit_price) AS total_amount
+            FROM CustomerOrder co
+            JOIN OrderItem oi ON co.id = oi.order_id
+            GROUP BY co.id
+        )
+        SELECT order_id, order_date, status, total_amount
+        FROM order_totals
+        WHERE total_amount > (SELECT AVG(total_amount) FROM order_totals)
+        ORDER BY total_amount DESC
+    """).fetchall()
+
+    avg_order_value = conn.execute("""
+        SELECT AVG(total_amount) AS avg_value FROM (
+            SELECT SUM(oi.quantity * oi.unit_price) AS total_amount
+            FROM CustomerOrder co
+            JOIN OrderItem oi ON co.id = oi.order_id
+            GROUP BY co.id
+        )
+    """).fetchone()["avg_value"]
+
+    low_stock = conn.execute("""
+        SELECT name, stock FROM Product
+        WHERE stock < 5
+        ORDER BY stock ASC
+    """).fetchall()
+
+    sales_by_month = conn.execute("""
+        SELECT strftime('%Y-%m', co.order_date) AS month,
+               SUM(oi.quantity * oi.unit_price) AS monthly_revenue
+        FROM CustomerOrder co
+        JOIN OrderItem oi ON co.id = oi.order_id
+        WHERE co.status != 'cancelled'
+        GROUP BY month
+        ORDER BY month
+    """).fetchall()
+
+    conn.close()
+
+    return render_template(
+        "analytics.html",
+        revenue_by_category=revenue_by_category,
+        top_customers=top_customers,
+        never_ordered=never_ordered,
+        above_average=above_average,
+        avg_order_value=avg_order_value,
+        low_stock=low_stock,
+        sales_by_month=sales_by_month,
+    )
+
+
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="mb-4">Analytics</h1>
+
+<h4>A — Revenu par catégorie</h4>
+<table class="table table-striped">
+    <thead><tr><th>Catégorie</th><th>Unités vendues</th><th>Revenu</th></tr></thead>
+    <tbody>
+        {% for r in revenue_by_category %}
+        <tr><td>{{ r['category_name'] }}</td><td>{{ r['total_units_sold'] }}</td><td>{{ "%.2f"|format(r['total_revenue']) }} €</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h4>B — Top 5 clients</h4>
+<table class="table table-striped">
+    <thead><tr><th>Client</th><th>Nb commandes</th><th>Total dépensé</th></tr></thead>
+    <tbody>
+        {% for c in top_customers %}
+        <tr><td>{{ c['full_name'] }}</td><td>{{ c['nb_orders'] }}</td><td>{{ "%.2f"|format(c['total_spent']) }} €</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h4>C — Produits jamais commandés</h4>
+<table class="table table-striped">
+    <thead><tr><th>Produit</th></tr></thead>
+    <tbody>
+        {% for p in never_ordered %}
+        <tr><td>{{ p['name'] }}</td></tr>
+        {% else %}
+        <tr><td>Tous les produits ont été commandés au moins une fois.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h4>D — Commandes au-dessus de la moyenne</h4>
+<p>Valeur moyenne d'une commande : <strong>{{ "%.2f"|format(avg_order_value) }} €</strong></p>
+<table class="table table-striped">
+    <thead><tr><th>ID</th><th>Date</th><th>Statut</th><th>Montant</th></tr></thead>
+    <tbody>
+        {% for o in above_average %}
+        <tr><td>{{ o['order_id'] }}</td><td>{{ o['order_date'] }}</td><td>{{ o['status'] }}</td><td>{{ "%.2f"|format(o['total_amount']) }} €</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h4>E — Produits en stock bas (&lt; 5)</h4>
+<table class="table table-striped">
+    <thead><tr><th>Produit</th><th>Stock</th></tr></thead>
+    <tbody>
+        {% for p in low_stock %}
+        <tr><td>{{ p['name'] }}</td><td>{{ p['stock'] }}</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<h4>F — Ventes par mois</h4>
+<table class="table table-striped">
+    <thead><tr><th>Mois</th><th>Revenu</th></tr></thead>
+    <tbody>
+        {% for m in sales_by_month %}
+        <tr><td>{{ m['month'] }}</td><td>{{ "%.2f"|format(m['monthly_revenue']) }} €</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
