@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="mb-4">Dashboard</h1>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <h6>Produits</h6>
+            <h3>{{ nb_products }}</h3>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <h6>Clients</h6>
+            <h3>{{ nb_customers }}</h3>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <h6>Commandes</h6>
+            <h3>{{ nb_orders }}</h3>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3">
+            <h6>Revenu total</h6>
+            <h3>{{ "%.2f"|format(total_revenue) }} €</h3>
+        </div>
+    </div>
+</div>
+
+<h4>Produit le plus vendu</h4>
+<p>{{ best_seller["name"] }} — {{ best_seller["total_sold"] }} unités vendues</p>
+
+<h4>5 commandes les plus récentes</h4>
+<table class="table table-striped">
+    <thead>
+        <tr><th>ID</th><th>Client</th><th>Date</th><th>Statut</th><th>Montant</th></tr>
+    </thead>
+    <tbody>
+        {% for order in recent_orders %}
+        <tr>
+            <td>{{ order["id"] }}</td>
+            <td>{{ order["customer_name"] }}</td>
+            <td>{{ order["order_date"] }}</td>
+            <td>{{ order["status"] }}</td>
+            <td>{{ "%.2f"|format(order["total_amount"]) }} €</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
