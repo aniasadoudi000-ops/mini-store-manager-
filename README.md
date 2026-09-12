@@ -77,5 +77,6 @@ L'application est accessible sur [http://127.0.0.1:5000](http://127.0.0.1:5000).
 - Gestion des erreurs : email client dupliqué, valeurs numériques invalides, suppression bloquée par intégrité référentielle, stock insuffisant, ID de ressource inexistant.
 
 
+## Auteur
 
 Ania Sadoudi 
