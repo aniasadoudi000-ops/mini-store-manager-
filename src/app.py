@@ -192,9 +192,12 @@ def product_edit(product_id):
 def product_delete(product_id):
     conn = get_db()
     try:
-        conn.execute("DELETE FROM Product WHERE id = ?", (product_id,))
+        cur = conn.execute("DELETE FROM Product WHERE id = ?", (product_id,))
         conn.commit()
-        flash("Produit supprimé.", "success")
+        if cur.rowcount == 0:
+            flash("Produit introuvable, rien n'a été supprimé.", "warning")
+        else:
+            flash("Produit supprimé.", "success")
     except sqlite3.IntegrityError:
         flash("Impossible de supprimer ce produit : il est référencé dans au moins une commande.", "danger")
     finally:
@@ -231,6 +234,40 @@ def customers():
     conn.close()
 
     return render_template("customers.html", customers=customer_list, search=search)
+
+
+@app.route("/customers/new", methods=["GET", "POST"])
+def customer_new():
+    conn = get_db()
+
+    if request.method == "POST":
+        first_name = request.form.get("first_name", "").strip()
+        last_name = request.form.get("last_name", "").strip()
+        email = request.form.get("email", "").strip()
+        city = request.form.get("city", "").strip()
+
+        if not first_name or not last_name or not email:
+            conn.close()
+            flash("Prénom, nom et email sont obligatoires.", "danger")
+            return render_template("customer_form.html", customer=request.form)
+
+        try:
+            conn.execute(
+                "INSERT INTO Customer (first_name, last_name, email, city) VALUES (?, ?, ?, ?)",
+                (first_name, last_name, email, city),
+            )
+            conn.commit()
+            flash("Client créé.", "success")
+        except sqlite3.IntegrityError:
+            conn.close()
+            flash(f"Un client existe déjà avec l'email {email}.", "danger")
+            return render_template("customer_form.html", customer=request.form)
+
+        conn.close()
+        return redirect(url_for("customers"))
+
+    conn.close()
+    return render_template("customer_form.html", customer=None)
 
 
 @app.route("/customers/<int:customer_id>")

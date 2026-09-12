@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Nouveau client</h1>
+<form method="post">
+    <div class="mb-3">
+        <label class="form-label">Prénom</label>
+        <input type="text" name="first_name" class="form-control" value="{{ customer['first_name'] if customer else '' }}" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Nom</label>
+        <input type="text" name="last_name" class="form-control" value="{{ customer['last_name'] if customer else '' }}" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input type="email" name="email" class="form-control" value="{{ customer['email'] if customer else '' }}" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Ville</label>
+        <input type="text" name="city" class="form-control" value="{{ customer['city'] if customer else '' }}">
+    </div>
+    <button class="btn btn-primary">Enregistrer</button>
+    <a href="{{ url_for('customers') }}" class="btn btn-secondary">Annuler</a>
+</form>
+{% endblock %}
