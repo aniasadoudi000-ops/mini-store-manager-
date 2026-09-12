@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="mb-4">Clients</h1>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-4">
+        <input type="text" name="q" class="form-control" placeholder="Rechercher (nom, email)" value="{{ search }}">
+    </div>
+    <div class="col-md-2">
+        <button class="btn btn-secondary w-100">Rechercher</button>
+    </div>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr><th>Nom</th><th>Email</th><th>Ville</th><th>Nb commandes</th><th>Total dépensé</th></tr>
+    </thead>
+    <tbody>
+        {% for c in customers %}
+        <tr>
+            <td><a href="{{ url_for('customer_detail', customer_id=c['id']) }}">{{ c['full_name'] }}</a></td>
+            <td>{{ c['email'] }}</td>
+            <td>{{ c['city'] }}</td>
+            <td>{{ c['nb_orders'] }}</td>
+            <td>{{ "%.2f"|format(c['total_spent']) }} €</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<a href="{{ url_for('customers') }}">&larr; Retour aux clients</a>
+<h1 class="mt-2">{{ customer['first_name'] }} {{ customer['last_name'] }}</h1>
+<p>
+    Email : {{ customer['email'] }}<br>
+    Ville : {{ customer['city'] }}<br>
+    Client depuis : {{ customer['created_at'] }}<br>
+    <strong>Total dépensé (hors commandes annulées) : {{ "%.2f"|format(total_spent) }} €</strong>
+</p>
+
+<h4>Historique des commandes</h4>
+<table class="table table-striped">
+    <thead>
+        <tr><th>ID</th><th>Date</th><th>Statut</th><th>Montant</th></tr>
+    </thead>
+    <tbody>
+        {% for o in orders %}
+        <tr>
+            <td>{{ o['id'] }}</td>
+            <td>{{ o['order_date'] }}</td>
+            <td>{{ o['status'] }}</td>
+            <td>{{ "%.2f"|format(o['total_amount']) }} €</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4">Aucune commande.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

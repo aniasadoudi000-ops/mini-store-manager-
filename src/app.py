@@ -202,5 +202,68 @@ def product_delete(product_id):
     return redirect(url_for("products"))
 
 
+@app.route("/customers")
+def customers():
+    conn = get_db()
+    search = request.args.get("q", "").strip()
+
+    query = """
+        SELECT 
+            c.id,
+            c.first_name || ' ' || c.last_name AS full_name,
+            c.email,
+            c.city,
+            COUNT(DISTINCT co.id) AS nb_orders,
+            COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS total_spent
+        FROM Customer c
+        LEFT JOIN CustomerOrder co ON c.id = co.customer_id AND co.status != 'cancelled'
+        LEFT JOIN OrderItem oi ON co.id = oi.order_id
+        WHERE 1=1
+    """
+    params = []
+    if search:
+        query += " AND (c.first_name LIKE ? OR c.last_name LIKE ? OR c.email LIKE ?)"
+        params += [f"%{search}%", f"%{search}%", f"%{search}%"]
+
+    query += " GROUP BY c.id, c.first_name, c.last_name, c.email, c.city ORDER BY c.last_name"
+
+    customer_list = conn.execute(query, params).fetchall()
+    conn.close()
+
+    return render_template("customers.html", customers=customer_list, search=search)
+
+
+@app.route("/customers/<int:customer_id>")
+def customer_detail(customer_id):
+    conn = get_db()
+
+    customer = conn.execute("SELECT * FROM Customer WHERE id = ?", (customer_id,)).fetchone()
+    if customer is None:
+        conn.close()
+        flash("Client introuvable.", "danger")
+        return redirect(url_for("customers"))
+
+    orders = conn.execute("""
+        SELECT co.id, co.order_date, co.status,
+               SUM(oi.quantity * oi.unit_price) AS total_amount
+        FROM CustomerOrder co
+        JOIN OrderItem oi ON co.id = oi.order_id
+        WHERE co.customer_id = ?
+        GROUP BY co.id, co.order_date, co.status
+        ORDER BY co.order_date DESC
+    """, (customer_id,)).fetchall()
+
+    total_spent = conn.execute("""
+        SELECT COALESCE(SUM(oi.quantity * oi.unit_price), 0) AS total
+        FROM CustomerOrder co
+        JOIN OrderItem oi ON co.id = oi.order_id
+        WHERE co.customer_id = ? AND co.status != 'cancelled'
+    """, (customer_id,)).fetchone()["total"]
+
+    conn.close()
+
+    return render_template("customer_detail.html", customer=customer, orders=orders, total_spent=total_spent)
+
+
 if __name__ == "__main__":
     app.run(debug=True)
